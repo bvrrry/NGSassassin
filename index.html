@@ -1,0 +1,2923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The (peg) Assassin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<!-- SheetJS for Excel import -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    /* House colours */
+    --shortland: #f5c518;
+    --hunter:    #4aa363;
+    --tyrrell:   #3b7dd8;
+    --macquarie: #d8493b;
+
+    /* UI palette — warm, red-forward */
+    --bg:        #fbf5f1;
+    --bg-warm:   #f6ebe4;
+    --bg-card:   #ffffff;
+    --ink:       #1a0e0b;
+    --ink-soft:  #5a3d35;
+    --ink-faint: #9a847a;
+    --line:      #ebd9cf;
+    --line-soft: #f3e6dd;
+    --accent:       #c42718;   /* main red */
+    --accent-dark:  #8f1a0e;
+    --accent-light: #e54b3c;
+    --accent-soft:  #fde4df;
+    --accent-glow:  rgba(196, 39, 24, 0.18);
+    --wood:      #c9a87a;
+
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(143, 26, 14, 0.04), 0 8px 24px rgba(143, 26, 14, 0.08);
+    --shadow-red: 0 4px 20px rgba(196, 39, 24, 0.25);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    /* red-tinted atmospheric background */
+    background-image:
+      radial-gradient(ellipse 800px 500px at 10% -5%, rgba(196, 39, 24, 0.12), transparent 60%),
+      radial-gradient(ellipse 600px 400px at 90% 10%, rgba(229, 75, 60, 0.08), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 50% 100%, rgba(196, 39, 24, 0.06), transparent 60%);
+    min-height: 100vh;
+    position: relative;
+  }
+
+  /* Ambient dotted grid overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(rgba(196, 39, 24, 0.08) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+    z-index: 0;
+    mask-image: radial-gradient(ellipse at center, black 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 20%, transparent 75%);
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  /* ============ ADMIN BAR ============ */
+  .admin-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-size: 12px;
+    box-shadow: var(--shadow);
+    flex-wrap: wrap;
+  }
+
+  .admin-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .fb-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .fb-status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--ink-faint);
+  }
+  .fb-status-dot.connected { background: var(--hunter); animation: pulse 2s infinite; box-shadow: 0 0 0 0 rgba(74, 163, 99, 0.5); }
+  .fb-status-dot.error { background: var(--accent); }
+  .fb-status-dot.local { background: #e0a02d; }
+
+  .admin-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .admin-btn {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .admin-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .admin-btn.active {
+    background: var(--ink);
+    color: #fff;
+    border-color: var(--ink);
+  }
+  .admin-btn.active:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  /* ============ ADMIN MODAL ============ */
+  .admin-panel {
+    max-width: 720px !important;
+  }
+
+  .admin-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 28px;
+    border-bottom: 1px solid var(--line);
+  }
+  .admin-tab {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 14px 16px;
+    background: transparent;
+    border: none;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+  }
+  .admin-tab:hover { color: var(--ink); }
+  .admin-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .admin-tab-panel {
+    display: none;
+    padding: 24px 28px;
+  }
+  .admin-tab-panel.active { display: block; }
+
+  .upload-zone {
+    border: 2px dashed var(--line);
+    border-radius: 12px;
+    padding: 32px 20px;
+    text-align: center;
+    transition: all 0.2s;
+    cursor: pointer;
+    background: var(--bg-warm);
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .upload-zone-icon {
+    font-size: 32px;
+    color: var(--accent);
+    margin-bottom: 8px;
+    line-height: 1;
+  }
+  .upload-zone-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .upload-zone-hint {
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+
+  .file-info {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: var(--bg-warm);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font-size: 13px;
+  }
+
+  .import-preview {
+    margin-top: 16px;
+    max-height: 280px;
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .import-preview-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 13px;
+    align-items: center;
+  }
+  .import-preview-row:last-child { border-bottom: none; }
+  .import-preview-row.header {
+    background: var(--bg-warm);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    position: sticky;
+    top: 0;
+  }
+  .import-preview-row.error {
+    background: var(--accent-soft);
+  }
+  .import-error-badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding: 2px 6px;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    background: #fff;
+  }
+  .import-ok-badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--hunter);
+    padding: 2px 6px;
+    border: 1px solid var(--hunter);
+    border-radius: 4px;
+    background: #fff;
+  }
+
+  .notice {
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 16px;
+  }
+  .notice.info {
+    background: #eaf3fc;
+    border: 1px solid #b6d6f3;
+    color: #1e4976;
+  }
+  .notice.warn {
+    background: #fff4de;
+    border: 1px solid #f1d49b;
+    color: #8a5a12;
+  }
+  .notice.success {
+    background: #e8f5ec;
+    border: 1px solid #a9d9b5;
+    color: #1e5028;
+  }
+  .notice.error {
+    background: var(--accent-soft);
+    border: 1px solid #f5a99c;
+    color: var(--accent-dark);
+  }
+
+  .cancel-list {
+    max-height: 420px;
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .cancel-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .cancel-row:last-child { border-bottom: none; }
+  .cancel-name {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .cancel-meta {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 3px;
+  }
+  .cancel-btn {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    padding: 7px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--accent);
+    background: #fff;
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .cancel-btn:hover {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .import-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 18px;
+  }
+
+  .danger-zone {
+    margin-top: 24px;
+    padding: 16px;
+    border: 1px solid #f5a99c;
+    background: #fff7f5;
+    border-radius: 10px;
+  }
+  .danger-zone-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .danger-zone-desc {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 10px;
+  }
+  .btn-danger {
+    background: #fff;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    font-weight: 600;
+  }
+  .btn-danger:hover {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .login-form {
+    padding: 24px 28px;
+  }
+  .login-helper {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+
+  /* ============ HEADER ============ */
+  .site-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 40px;
+    padding: 28px;
+    position: relative;
+    background: linear-gradient(135deg, var(--bg-card) 0%, var(--accent-soft) 100%);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+
+  /* Decorative red gradient accent in header */
+  .site-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, var(--accent-glow), transparent 60%);
+    pointer-events: none;
+  }
+  .site-header::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-light) 50%, var(--accent) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 4s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0%, 100% { background-position: 0% 0%; }
+    50% { background-position: 100% 0%; }
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .peg-icon {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 2px 6px rgba(196, 39, 24, 0.3));
+    animation: peg-tilt 6s ease-in-out infinite;
+    transform-origin: 50% 20%;
+  }
+
+  @keyframes peg-tilt {
+    0%, 100% { transform: rotate(-3deg); }
+    50% { transform: rotate(3deg); }
+  }
+
+  .brand-text .eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .brand-text .eyebrow::before {
+    content: '';
+    width: 20px;
+    height: 1.5px;
+    background: var(--accent);
+  }
+
+  h1.title {
+    font-family: 'Inter', sans-serif;
+    font-weight: 900;
+    font-size: 44px;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+  }
+
+  h1 .paren {
+    font-style: italic;
+    font-weight: 800;
+    color: var(--accent);
+    position: relative;
+    display: inline-block;
+  }
+  h1 .paren::after {
+    content: '';
+    position: absolute;
+    left: -2px; right: -2px; bottom: -2px;
+    height: 4px;
+    background: var(--accent);
+    opacity: 0.15;
+    border-radius: 2px;
+  }
+
+  /* Live timer */
+  .timer {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px 22px;
+    min-width: 300px;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 4px 16px rgba(196, 39, 24, 0.12);
+  }
+
+  .timer-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .live-pip {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+    box-shadow: 0 0 0 0 var(--accent-glow);
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--accent-glow); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 8px transparent; }
+  }
+
+  .timer-value {
+    font-family: 'Inter', sans-serif;
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    color: var(--ink);
+  }
+
+  .timer-value .num { min-width: 1.8ch; display: inline-block; text-align: right; font-variant-numeric: tabular-nums; }
+  .timer-value .sep { color: var(--ink-faint); font-weight: 400; }
+  .timer-value .unit {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--accent);
+    margin-right: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* ============ STATS ============ */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .stat {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .stat::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-light));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+  }
+  .stat::after {
+    content: '';
+    position: absolute;
+    bottom: -40px; right: -40px;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, var(--accent-glow), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .stat:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-light);
+    box-shadow: var(--shadow-red);
+  }
+  .stat:hover::before { transform: scaleX(1); }
+  .stat:hover::after { opacity: 1; }
+
+  .stat-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .stat-label::before {
+    content: '';
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .stat-value {
+    font-family: 'Inter', sans-serif;
+    font-size: 40px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-value.accent { color: var(--accent); }
+
+  .stat-sub {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 10px;
+    font-weight: 500;
+  }
+
+  /* ============ SECTION HEADINGS ============ */
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+
+  h2.section-title {
+    font-family: 'Inter', sans-serif;
+    font-weight: 800;
+    font-size: 26px;
+    letter-spacing: -0.02em;
+  }
+
+  .section-note {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-faint);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* ============ PRIMARY ACTION ============ */
+  .action-bar {
+    background: linear-gradient(135deg, var(--ink) 0%, var(--accent-dark) 100%);
+    border: 1px solid var(--accent-dark);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 40px;
+    box-shadow: var(--shadow-red);
+    flex-wrap: wrap;
+    position: relative;
+    overflow: hidden;
+    color: #fff;
+  }
+  .action-bar::before {
+    content: '';
+    position: absolute;
+    top: -100px; right: -100px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, var(--accent), transparent 60%);
+    opacity: 0.5;
+    pointer-events: none;
+    animation: drift 20s ease-in-out infinite;
+  }
+  .action-bar::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; left: 30%;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, var(--accent-light), transparent 60%);
+    opacity: 0.3;
+    pointer-events: none;
+    animation: drift 20s ease-in-out infinite reverse;
+  }
+
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-20px, 20px); }
+  }
+
+  .action-bar-text {
+    position: relative;
+    z-index: 1;
+  }
+  .action-bar-text h3 {
+    font-family: 'Inter', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+    color: #fff;
+  }
+
+  .action-bar-text p {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .btn {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 13px 24px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: -0.01em;
+    position: relative;
+    z-index: 1;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(196, 39, 24, 0.35);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    background: var(--accent-light);
+    box-shadow: 0 8px 24px rgba(196, 39, 24, 0.45);
+  }
+
+  .btn-on-dark {
+    background: #fff;
+    color: var(--accent-dark);
+  }
+  .btn-on-dark:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--line);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ============ DASHBOARD GRID ============ */
+  .grid {
+    display: grid;
+    grid-template-columns: 1.7fr 1fr;
+    gap: 24px;
+    margin-bottom: 48px;
+  }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.2s ease;
+  }
+  .card:hover { box-shadow: var(--shadow-red); }
+
+  .card-head {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: linear-gradient(180deg, var(--bg-warm) 0%, var(--bg-card) 100%);
+  }
+
+  .card-title {
+    font-family: 'Inter', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card-title::before {
+    content: '';
+    width: 4px;
+    height: 20px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-light));
+  }
+
+  /* ============ FILTER PILLS ============ */
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .pill {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .pill:hover { border-color: var(--accent); color: var(--accent); }
+  .pill.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(196, 39, 24, 0.3);
+  }
+
+  /* ============ SEARCH ============ */
+  .search-wrap {
+    padding: 12px 22px;
+    border-bottom: 1px solid var(--line-soft);
+    position: relative;
+  }
+  .search-wrap::before {
+    content: '';
+    position: absolute;
+    left: 34px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px; height: 14px;
+    border: 1.5px solid var(--ink-faint);
+    border-radius: 50%;
+  }
+  .search-wrap::after {
+    content: '';
+    position: absolute;
+    left: 46px;
+    top: calc(50% + 5px);
+    width: 6px; height: 1.5px;
+    background: var(--ink-faint);
+    transform: rotate(45deg);
+  }
+  .search {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px 10px 36px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    background: var(--bg);
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+  /* ============ PLAYER LIST ============ */
+  .player-list {
+    /* no max-height — fills its container naturally */
+  }
+
+  /* ============ PAGINATION ============ */
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 22px;
+    border-top: 1px solid var(--line-soft);
+    flex-wrap: wrap;
+  }
+  .pagination-info {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    color: var(--ink-soft);
+  }
+  .pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .page-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .page-btn:hover:not(:disabled) {
+    border-color: var(--ink);
+  }
+  .page-btn.active {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+  .page-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  .page-ellipsis {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-faint);
+    padding: 0 4px;
+  }
+
+  /* ============ RULES ACCORDION ============ */
+  .rules-accordion {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    margin-bottom: 40px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.2s;
+  }
+  .rules-accordion:hover { box-shadow: var(--shadow-red); }
+
+  .rules-accordion::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 250px; height: 100%;
+    background: radial-gradient(circle at top right, var(--accent-glow), transparent 70%);
+    pointer-events: none;
+  }
+  .rules-accordion::after {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-light));
+  }
+
+  .rules-trigger {
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 22px 28px 22px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    color: var(--ink);
+    position: relative;
+    z-index: 1;
+    transition: background 0.15s;
+  }
+  .rules-trigger:hover { background: var(--bg-warm); }
+
+  .rules-trigger-text .rules-eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .rules-trigger-text .rules-eyebrow::before {
+    content: '';
+    width: 20px;
+    height: 1.5px;
+    background: var(--accent);
+  }
+  .rules-trigger-text h2 {
+    font-family: 'Inter', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .chevron {
+    width: 14px;
+    height: 14px;
+    border-right: 2.5px solid var(--accent);
+    border-bottom: 2.5px solid var(--accent);
+    transform: rotate(45deg);
+    transition: transform 0.3s ease;
+    flex-shrink: 0;
+    margin-top: -4px;
+  }
+  .rules-accordion.open .chevron {
+    transform: rotate(-135deg);
+    margin-top: 4px;
+  }
+
+  .rules-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+  }
+  .rules-accordion.open .rules-content {
+    max-height: 700px;
+  }
+
+  .rules-content-inner {
+    padding: 4px 28px 28px 32px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .player-row {
+    display: grid;
+    grid-template-columns: 14px 1fr auto auto 14px;
+    gap: 16px;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--line-soft);
+    transition: background 0.15s, padding 0.15s;
+    cursor: pointer;
+    position: relative;
+  }
+  .player-row::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    transform: scaleY(0);
+    transform-origin: center;
+    transition: transform 0.2s ease;
+  }
+  .player-row:last-child { border-bottom: none; }
+  .player-row:hover {
+    background: var(--bg-warm);
+  }
+  .player-row:hover::before { transform: scaleY(1); }
+  .player-row.expanded {
+    background: var(--bg-warm);
+    border-bottom-color: transparent;
+  }
+  .player-row.expanded::before { transform: scaleY(1); }
+
+  .row-caret {
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--ink-faint);
+    border-bottom: 2px solid var(--ink-faint);
+    transform: rotate(-45deg);
+    transition: transform 0.2s ease, border-color 0.2s;
+  }
+  .player-row:hover .row-caret { border-color: var(--accent); }
+  .player-row.expanded .row-caret {
+    transform: rotate(45deg);
+    border-color: var(--accent);
+  }
+
+  .status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    position: relative;
+  }
+  .status-dot.alive {
+    background: var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+    box-shadow: 0 0 0 0 var(--accent-glow);
+  }
+  .status-dot.alive::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    opacity: 0.3;
+    animation: ring 2s ease-in-out infinite;
+  }
+  @keyframes ring {
+    0%, 100% { transform: scale(1); opacity: 0.3; }
+    50% { transform: scale(1.4); opacity: 0; }
+  }
+  .status-dot.out {
+    background: transparent;
+    border: 1.5px solid var(--ink-faint);
+  }
+
+  /* Expanded player detail panel */
+  .player-detail {
+    border-bottom: 1px solid var(--line-soft);
+    background: linear-gradient(180deg, var(--bg-warm) 0%, var(--bg-card) 100%);
+    overflow: hidden;
+    max-height: 0;
+    padding: 0 24px 0 40px;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+  }
+  .player-detail:empty { border: none; }
+  .player-detail.open {
+    max-height: 800px;
+    padding: 20px 24px 24px 40px;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 18px;
+  }
+
+  .detail-block {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .detail-block-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 8px;
+  }
+  .detail-block-value {
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .detail-block-value.red { color: var(--accent); }
+
+  .eliminated-list {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .eliminated-list-head {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line-soft);
+    background: linear-gradient(90deg, var(--accent-soft), transparent);
+  }
+  .eliminated-list-head .label {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .eliminated-list-head .count {
+    font-family: 'Inter', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+    margin-top: 2px;
+  }
+  .eliminated-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 13px;
+  }
+  .eliminated-list-item:last-child { border-bottom: none; }
+  .eliminated-list-item .kill-name {
+    font-weight: 600;
+    color: var(--ink);
+    text-decoration: line-through;
+    text-decoration-color: var(--accent);
+    text-decoration-thickness: 1.5px;
+  }
+  .eliminated-list-item .kill-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .eliminated-list-empty {
+    padding: 16px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--ink-faint);
+    font-weight: 500;
+  }
+
+  .got-by {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .got-by .got-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .got-by .got-name {
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .player-name {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .player-row.out .player-name {
+    color: var(--ink-faint);
+    text-decoration: line-through;
+    text-decoration-color: var(--accent);
+    text-decoration-thickness: 1.5px;
+  }
+
+  .player-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 3px;
+  }
+
+  .house-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: var(--ink);
+    position: relative;
+  }
+  .house-tag::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    border-radius: 4px 0 0 4px;
+  }
+  .house-tag.shortland { background: rgba(245, 197, 24, 0.15); }
+  .house-tag.shortland::before { background: var(--shortland); }
+  .house-tag.hunter    { background: rgba(74, 163, 99, 0.15); }
+  .house-tag.hunter::before    { background: var(--hunter); }
+  .house-tag.tyrrell   { background: rgba(59, 125, 216, 0.15); }
+  .house-tag.tyrrell::before   { background: var(--tyrrell); }
+  .house-tag.macquarie { background: rgba(216, 73, 59, 0.15); }
+  .house-tag.macquarie::before { background: var(--macquarie); }
+
+  .kills-col {
+    text-align: center;
+    min-width: 40px;
+  }
+  .kills-num {
+    font-family: 'Inter', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .kills-num.zero { color: var(--ink-faint); }
+  .kills-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .survived-col {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-align: right;
+    min-width: 80px;
+    font-weight: 500;
+  }
+  .survived-col .survived-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+
+  /* ============ LEADERBOARD ============ */
+  .leaderboard-row {
+    display: grid;
+    grid-template-columns: 32px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--line-soft);
+    transition: background 0.15s;
+    position: relative;
+  }
+  .leaderboard-row:hover { background: var(--bg-warm); }
+  .leaderboard-row:last-child { border-bottom: none; }
+  .leaderboard-row.top {
+    background: linear-gradient(90deg, var(--accent-soft), transparent);
+  }
+
+  .rank {
+    font-family: 'Inter', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--ink-faint);
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .rank.top { color: var(--accent); }
+
+  .lb-name { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+  .lb-name.out { color: var(--ink-faint); text-decoration: line-through; text-decoration-color: var(--accent); }
+  .lb-meta { font-size: 11px; color: var(--ink-soft); margin-top: 3px; font-weight: 500; }
+
+  .lb-kills {
+    font-family: 'Inter', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ============ HOUSE STANDINGS ============ */
+  .house-row {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--line-soft);
+    transition: background 0.15s;
+  }
+  .house-row:hover { background: var(--bg-warm); }
+  .house-row:last-child { border-bottom: none; }
+
+  .house-row-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .house-row-name {
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .house-swatch {
+    width: 12px; height: 12px; border-radius: 3px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
+  }
+  .house-row-count {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+  .house-row-count .alive-count {
+    color: var(--ink);
+    font-weight: 800;
+    font-size: 14px;
+  }
+
+  .house-bar {
+    height: 8px;
+    background: var(--line-soft);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+  }
+  .house-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .house-bar-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: bar-shine 3s ease-in-out infinite;
+  }
+  @keyframes bar-shine {
+    0%, 100% { transform: translateX(-100%); }
+    50% { transform: translateX(100%); }
+  }
+
+  /* ============ RULES LIST (inside accordion) ============ */
+  .rules-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .rules-list li {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 18px;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .rules-list li:last-child { border-bottom: none; }
+
+  .rule-num {
+    font-family: 'Inter', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rule-text {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink);
+    font-weight: 500;
+    padding-top: 2px;
+  }
+  .rule-text strong { font-weight: 700; color: var(--accent-dark); }
+
+  /* ============ MODAL ============ */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(26, 26, 26, 0.5);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+    animation: fade-in 0.2s;
+  }
+  .modal-backdrop.open { display: flex; }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .modal {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    max-width: 540px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slide-up 0.25s ease-out;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+
+  .modal-head {
+    padding: 24px 28px 20px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .modal-head h2 {
+    font-family: 'Inter', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .modal-head p {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-top: 4px;
+  }
+
+  .close-btn {
+    background: transparent;
+    border: none;
+    font-size: 22px;
+    color: var(--ink-faint);
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+  }
+  .close-btn:hover { color: var(--ink); }
+
+  .modal-body { padding: 24px 28px; }
+
+  .field {
+    margin-bottom: 20px;
+  }
+  .field label {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .field select, .field input {
+    width: 100%;
+    padding: 12px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--bg-card);
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field select:focus, .field input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .field .helper {
+    font-size: 12px;
+    color: var(--ink-faint);
+    margin-top: 6px;
+    font-weight: 500;
+  }
+
+  .modal-foot {
+    padding: 16px 28px 24px;
+    border-top: 1px solid var(--line-soft);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  /* ============ FOOTER ============ */
+  .site-footer {
+    padding-top: 32px;
+    margin-top: 48px;
+    border-top: 1px solid var(--line);
+    text-align: center;
+    color: var(--ink-faint);
+    font-size: 13px;
+  }
+  .site-footer .small {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  /* ============ RESPONSIVE ============ */
+  @media (max-width: 880px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .grid { grid-template-columns: 1fr; }
+    h1.title { font-size: 30px; }
+    .player-row { grid-template-columns: 12px 1fr auto 14px; gap: 12px; padding: 14px 18px; }
+    .hide-mobile { display: none; }
+    .card-head, .search-wrap { padding-left: 18px; padding-right: 18px; }
+    .rules-trigger { padding: 18px 20px 18px 24px; }
+    .rules-content-inner { padding: 4px 20px 20px 24px; }
+    .detail-grid { grid-template-columns: 1fr; gap: 12px; }
+    .player-detail.open { padding: 16px 18px 18px 24px; }
+    .site-header { padding: 22px; }
+    .action-bar { padding: 20px 22px; }
+  }
+  @media (max-width: 480px) {
+    .stats { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat { padding: 16px; }
+    .stat-value { font-size: 30px; }
+    .timer { min-width: 0; width: 100%; }
+    .wrap { padding: 20px 16px 60px; }
+    h1.title { font-size: 26px; }
+  }
+
+  .empty {
+    padding: 48px 20px;
+    text-align: center;
+    color: var(--ink-faint);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  /* ============ FOOTER ============ */
+  .site-footer .small {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 6px;
+    color: var(--accent);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ ADMIN BAR ============ -->
+  <div class="admin-bar">
+    <div class="admin-bar-left">
+      <span class="fb-status">
+        <span class="fb-status-dot" id="fb-status-dot"></span>
+        <span id="fb-status-text">Connecting…</span>
+      </span>
+      <span id="admin-welcome" style="display:none; color: var(--ink-soft); font-weight: 500;">Signed in as teacher</span>
+    </div>
+    <div class="admin-bar-right">
+      <button class="admin-btn" id="admin-login-btn" onclick="openAdminLogin()">Teacher login</button>
+      <button class="admin-btn active" id="admin-panel-btn" onclick="openAdminPanel()" style="display:none;">Admin panel</button>
+      <button class="admin-btn" id="admin-logout-btn" onclick="adminLogout()" style="display:none;">Sign out</button>
+    </div>
+  </div>
+
+  <!-- ============ HEADER ============ -->
+  <header class="site-header">
+    <div class="brand">
+      <!-- Simple clothespeg SVG -->
+      <svg class="peg-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="14" y="8" width="36" height="44" rx="3" fill="#c9a87a" stroke="#1a1a1a" stroke-width="2"/>
+        <path d="M32 8 L32 52" stroke="#1a1a1a" stroke-width="2"/>
+        <circle cx="32" cy="28" r="3.5" fill="#c84a2e" stroke="#1a1a1a" stroke-width="1.5"/>
+        <path d="M20 52 L20 58 M44 52 L44 58" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <div class="brand-text">
+        <div class="eyebrow">Year 12 - Term 2</div>
+        <h1 class="title">The <span class="paren">(peg)</span> Assassin</h1>
+      </div>
+    </div>
+
+    <div class="timer">
+      <div class="timer-label"><span class="live-pip"></span> Game running for</div>
+      <div class="timer-value" id="timer">
+        <span class="num" id="t-d">0</span><span class="unit">d</span>
+        <span class="num" id="t-h">0</span><span class="unit">h</span>
+        <span class="num" id="t-m">0</span><span class="unit">m</span>
+        <span class="num" id="t-s">0</span><span class="unit">s</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ RULES ACCORDION ============ -->
+  <section class="rules-accordion" id="rules-accordion">
+    <button class="rules-trigger" onclick="toggleRules()" aria-expanded="false" aria-controls="rules-content">
+      <div class="rules-trigger-text">
+        <div class="rules-eyebrow">Read before you play</div>
+        <h2>The rules</h2>
+      </div>
+      <span class="chevron" aria-hidden="true"></span>
+    </button>
+    <div class="rules-content" id="rules-content">
+      <div class="rules-content-inner">
+        <ul class="rules-list">
+          <li>
+            <span class="rule-num">01</span>
+            <span class="rule-text">Assassinations are only possible <strong>outside of class time</strong>, and the game must not interfere with learning — this includes your study periods.</span>
+          </li>
+          <li>
+            <span class="rule-num">02</span>
+            <span class="rule-text">A peg must be <strong>attached securely</strong> at the time of assassination, and the target must be <strong>unaware</strong> that it is happening.</span>
+          </li>
+          <li>
+            <span class="rule-num">03</span>
+            <span class="rule-text">The only protection from assassination is to be wearing <strong>goggles that cover your eyes</strong>. Goggles around your neck or in your pocket do not count.</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STATS ============ -->
+  <section class="stats" id="stats-row">
+    <!-- injected -->
+  </section>
+
+  <!-- ============ PRIMARY ACTION ============ -->
+  <section class="action-bar">
+    <div class="action-bar-text">
+      <h3>Got someone?</h3>
+      <p>Log a successful peg assassination. Remember — targets stay between you and your mark.</p>
+    </div>
+    <button class="btn btn-on-dark" onclick="openModal()">Log an assassination →</button>
+  </section>
+
+  <!-- ============ DASHBOARD GRID ============ -->
+  <div class="grid">
+
+    <!-- LEFT: Players -->
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">Players</div>
+        <div class="pills" id="filter-pills">
+          <button class="pill active" data-filter="all">All</button>
+          <button class="pill" data-filter="alive">Still in</button>
+          <button class="pill" data-filter="out">Out</button>
+        </div>
+      </div>
+      <div class="search-wrap">
+        <input type="text" class="search" id="search" placeholder="Search by name or house…" />
+      </div>
+      <div class="player-list" id="player-list"></div>
+      <div class="pagination" id="pagination" style="display: none;"></div>
+    </section>
+
+    <!-- RIGHT: Leaderboard + Houses + Recent -->
+    <aside>
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="card-head">
+          <div class="card-title">Most assassinations</div>
+        </div>
+        <div id="leaderboard"></div>
+      </div>
+
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="card-head">
+          <div class="card-title">Still in, by house</div>
+        </div>
+        <div id="house-standings"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Latest</div>
+          <div class="section-note">auto-updates</div>
+        </div>
+        <div id="recent-feed"></div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="site-footer">
+    <div>Good luck. Play nice. Trust no one.</div>
+    <div class="small">The (peg) Assassin · Year 12 - Term 2</div>
+  </footer>
+
+</div>
+
+<!-- ============ MODAL ============ -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h2>Log an assassination</h2>
+        <p>All fields required. This will update the leaderboard in real time.</p>
+      </div>
+      <button class="close-btn" onclick="closeModal()" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label for="assassin-select">Your name (the assassin)</label>
+        <select id="assassin-select">
+          <option value="">— Select yourself —</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="target-select">Who did you get?</label>
+        <select id="target-select">
+          <option value="">— Select target —</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="time-input">When did it happen?</label>
+        <input type="datetime-local" id="time-input" />
+        <div class="helper">Defaults to now. Change it if you're logging after the fact.</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitKill()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ADMIN LOGIN MODAL ============ -->
+<div class="modal-backdrop" id="admin-login-modal">
+  <div class="modal" style="max-width: 440px;">
+    <div class="modal-head">
+      <div>
+        <h2>Teacher sign in</h2>
+        <p>Password-protected admin area.</p>
+      </div>
+      <button class="close-btn" onclick="closeAdminLogin()" aria-label="Close">×</button>
+    </div>
+    <div class="login-form">
+      <div class="login-helper">Enter the teacher admin password to manage students and eliminations.</div>
+      <div class="field">
+        <label for="admin-password">Password</label>
+        <input type="password" id="admin-password" autocomplete="off" placeholder="Enter password" onkeydown="if(event.key==='Enter') submitAdminLogin()" />
+      </div>
+      <div id="admin-login-error" style="display:none;" class="notice error">Incorrect password.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeAdminLogin()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitAdminLogin()">Sign in</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ADMIN PANEL MODAL ============ -->
+<div class="modal-backdrop" id="admin-panel-modal">
+  <div class="modal admin-panel">
+    <div class="modal-head">
+      <div>
+        <h2>Admin panel</h2>
+        <p>Manage students, houses, and mistaken eliminations.</p>
+      </div>
+      <button class="close-btn" onclick="closeAdminPanel()" aria-label="Close">×</button>
+    </div>
+
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="import" onclick="switchAdminTab('import')">Import students</button>
+      <button class="admin-tab" data-tab="cancel" onclick="switchAdminTab('cancel')">Cancel eliminations</button>
+    </div>
+
+    <!-- Import tab -->
+    <div class="admin-tab-panel active" id="admin-tab-import">
+      <div class="notice info">
+        Upload an Excel file (<code>.xlsx</code> or <code>.xls</code>) or CSV with two columns: <strong>Name</strong> and <strong>House</strong>.
+        Houses must be one of: Shortland, Hunter, Tyrrell, Macquarie.
+      </div>
+
+      <div class="upload-zone" id="upload-zone" onclick="document.getElementById('student-file').click()">
+        <div class="upload-zone-icon">⬆</div>
+        <div class="upload-zone-text">Click to choose file or drop it here</div>
+        <div class="upload-zone-hint">.xlsx, .xls, or .csv · two columns: name | house</div>
+      </div>
+      <input type="file" id="student-file" accept=".xlsx,.xls,.csv" style="display:none" />
+
+      <div id="import-feedback"></div>
+
+      <div class="danger-zone">
+        <div class="danger-zone-title">⚠ Danger zone</div>
+        <div class="danger-zone-desc">Remove all players and reset the game. This cannot be undone.</div>
+        <button class="btn btn-danger" onclick="clearAllPlayers()">Clear all players</button>
+      </div>
+    </div>
+
+    <!-- Cancel tab -->
+    <div class="admin-tab-panel" id="admin-tab-cancel">
+      <div class="notice warn">
+        Cancel a false elimination to bring a student back into the game. Their assassin's kill count will be reduced by one.
+      </div>
+      <div id="cancel-list-wrap"></div>
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeAdminPanel()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // ============ FIREBASE IMPORTS & INIT ============
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, getDoc, getDocs,
+    onSnapshot, query, orderBy, writeBatch, serverTimestamp, Timestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBPn9eWHGQeD5z3BjPaENMkU22XgiiQGBA",
+    authDomain: "ngsassassin-3a9eb.firebaseapp.com",
+    projectId: "ngsassassin-3a9eb",
+    storageBucket: "ngsassassin-3a9eb.firebasestorage.app",
+    messagingSenderId: "25912857428",
+    appId: "1:25912857428:web:818da0709ae7269d676ec1"
+  };
+
+  let db = null;
+  let firebaseReady = false;
+  let firebaseMode = 'connecting'; // 'connecting' | 'online' | 'local' | 'error'
+
+  try {
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    firebaseReady = true;
+  } catch (e) {
+    console.error('Firebase init failed:', e);
+    firebaseMode = 'error';
+  }
+
+  // ============ CONSTANTS ============
+  const HOUSES = {
+    Shortland: { color: '#f5c518', className: 'shortland' },
+    Hunter:    { color: '#4aa363', className: 'hunter' },
+    Tyrrell:   { color: '#3b7dd8', className: 'tyrrell' },
+    Macquarie: { color: '#d8493b', className: 'macquarie' },
+  };
+  const VALID_HOUSES = Object.keys(HOUSES);
+
+  const ADMIN_PASSWORD = "NGSassassin123";
+
+  // ============ STATE ============
+  let players = [];              // live state, synced from Firestore or local-only
+  let GAME_START = new Date();   // set from Firestore game_meta doc, or now
+  let isAdmin = sessionStorage.getItem('pegAdmin') === 'true';
+  let pendingImport = null;      // rows parsed from uploaded file, awaiting confirmation
+
+  // ============ FALLBACK DUMMY DATA ============
+  // Only used if Firebase fails AND no local data exists yet.
+  // Once Firebase is reachable the real data replaces this.
+  const FALLBACK_DUMMY = [
+    { id: '1',  name: 'Eleanor Vance',    house: 'Shortland', status: 'alive', kills: 3 },
+    { id: '2',  name: 'Marcus Chen',      house: 'Hunter',    status: 'alive', kills: 2 },
+    { id: '3',  name: 'Priya Kaur',       house: 'Shortland', status: 'alive', kills: 4 },
+    { id: '4',  name: 'Jasper Okonkwo',   house: 'Tyrrell',   status: 'alive', kills: 1 },
+    { id: '5',  name: 'Sofia Rinaldi',    house: 'Macquarie', status: 'alive', kills: 2 },
+    { id: '6',  name: 'Theo Ashworth',    house: 'Hunter',    status: 'alive', kills: 3 },
+    { id: '7',  name: 'Maya Lindqvist',   house: 'Shortland', status: 'alive', kills: 1 },
+    { id: '8',  name: 'Dmitri Volkov',    house: 'Tyrrell',   status: 'alive', kills: 2 },
+    { id: '9',  name: 'Harriet Blackburn',house: 'Macquarie', status: 'alive', kills: 0 },
+    { id: '10', name: 'Kai Nakamura',     house: 'Hunter',    status: 'alive', kills: 1 },
+    { id: '11', name: 'Isla MacGregor',   house: 'Shortland', status: 'alive', kills: 0 },
+    { id: '12', name: 'Rafael Mendoza',   house: 'Tyrrell',   status: 'out',   kills: 1, assassinBy: '3', eliminatedAt: new Date(Date.now() - (3 * 864e5) - (2 * 36e5)) },
+    { id: '13', name: 'Freya Holloway',   house: 'Macquarie', status: 'out',   kills: 0, assassinBy: '1', eliminatedAt: new Date(Date.now() - (2 * 864e5) - (14 * 36e5)) },
+    { id: '14', name: 'Bastian Wolfe',    house: 'Hunter',    status: 'alive', kills: 0 },
+    { id: '15', name: 'Nadia El-Amin',    house: 'Shortland', status: 'out',   kills: 2, assassinBy: '6', eliminatedAt: new Date(Date.now() - (18 * 36e5)) },
+    { id: '16', name: 'Oscar Pemberton',  house: 'Tyrrell',   status: 'out',   kills: 0, assassinBy: '5', eliminatedAt: new Date(Date.now() - (1 * 864e5) - (6 * 36e5)) },
+    { id: '17', name: 'Luna Takahashi',   house: 'Macquarie', status: 'out',   kills: 1, assassinBy: '3', eliminatedAt: new Date(Date.now() - (3 * 36e5) - (12 * 6e4)) },
+    { id: '18', name: 'Gideon Ashcroft',  house: 'Shortland', status: 'out',   kills: 0, assassinBy: '6', eliminatedAt: new Date(Date.now() - (4 * 36e5)) },
+  ];
+
+  let filter = 'all';
+  let search = '';
+  let currentPage = 1;
+  let expandedPlayerId = null;
+  const PAGE_SIZE = 12;
+
+  // ============ HELPERS ============
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function formatDuration(ms) {
+    const s = Math.floor(ms / 1000);
+    return { d: Math.floor(s/86400), h: Math.floor((s%86400)/3600), m: Math.floor((s%3600)/60), s: s%60 };
+  }
+
+  function formatAgo(date) {
+    const d = formatDuration(Date.now() - date);
+    if (d.d > 0) return `${d.d}d ${d.h}h ago`;
+    if (d.h > 0) return `${d.h}h ${d.m}m ago`;
+    if (d.m > 0) return `${d.m}m ago`;
+    return 'just now';
+  }
+
+  function formatSurvived(start, end) {
+    const d = formatDuration(end - start);
+    if (d.d > 0) return `${d.d}d ${d.h}h`;
+    if (d.h > 0) return `${d.h}h ${d.m}m`;
+    return `${d.m}m`;
+  }
+
+  function toLocalInput(date) {
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    return new Date(date - tzOffset).toISOString().slice(0, 16);
+  }
+
+  // ============ TIMER ============
+  function tickTimer() {
+    const d = formatDuration(Date.now() - GAME_START);
+    document.getElementById('t-d').textContent = d.d;
+    document.getElementById('t-h').textContent = pad(d.h);
+    document.getElementById('t-m').textContent = pad(d.m);
+    document.getElementById('t-s').textContent = pad(d.s);
+  }
+  setInterval(tickTimer, 1000);
+  tickTimer();
+
+  // ============ STATS ============
+  function renderStats() {
+    const alive = players.filter(p => p.status === 'alive');
+    const out   = players.filter(p => p.status === 'out');
+    const top   = [...players].sort((a,b) => b.kills - a.kills)[0];
+    const last  = [...out].sort((a,b) => b.eliminatedAt - a.eliminatedAt)[0];
+    const last24 = out.filter(p => (Date.now() - p.eliminatedAt) < 864e5).length;
+
+    document.getElementById('stats-row').innerHTML = `
+      <div class="stat">
+        <div class="stat-label">Still in</div>
+        <div class="stat-value">${alive.length}</div>
+        <div class="stat-sub">of ${players.length} starters</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Out</div>
+        <div class="stat-value">${out.length}</div>
+        <div class="stat-sub">${last24} in the last 24 hours</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Top assassin</div>
+        <div class="stat-value">${top ? top.kills : 0}</div>
+        <div class="stat-sub">${top ? top.name.split(' ')[0] + ' ' + (top.name.split(' ')[1]?.[0] || '') + '.' : '—'}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Latest</div>
+        <div class="stat-value" style="font-size: 22px;">${last ? formatAgo(last.eliminatedAt) : '—'}</div>
+        <div class="stat-sub">${last ? last.name + ' went out' : 'no eliminations yet'}</div>
+      </div>
+    `;
+  }
+
+  // ============ PLAYER LIST ============
+  function renderPlayers() {
+    let list = [...players];
+    if (filter === 'alive') list = list.filter(p => p.status === 'alive');
+    if (filter === 'out')   list = list.filter(p => p.status === 'out');
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(p => p.name.toLowerCase().includes(q) || p.house.toLowerCase().includes(q));
+    }
+    // Alive first, then out (by most recent elimination)
+    list.sort((a, b) => {
+      if (a.status !== b.status) return a.status === 'alive' ? -1 : 1;
+      if (a.status === 'out') return b.eliminatedAt - a.eliminatedAt;
+      return b.kills - a.kills;
+    });
+
+    const el = document.getElementById('player-list');
+    const pagEl = document.getElementById('pagination');
+
+    if (list.length === 0) {
+      if (players.length === 0) {
+        el.innerHTML = `<div class="empty" style="padding: 64px 20px;">
+          No players yet.<br>
+          <span style="color: var(--ink-soft); font-weight: 500; margin-top: 8px; display: inline-block;">Sign in as a teacher to import your class roster.</span>
+        </div>`;
+      } else {
+        el.innerHTML = '<div class="empty">No one matches that search.</div>';
+      }
+      pagEl.style.display = 'none';
+      return;
+    }
+
+    const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pageItems = list.slice(start, start + PAGE_SIZE);
+
+    el.innerHTML = pageItems.map(p => {
+      const houseClass = HOUSES[p.house].className;
+      const isOut = p.status === 'out';
+      const isExpanded = String(expandedPlayerId) === String(p.id);
+      return `
+        <div class="player-row ${isOut ? 'out' : ''} ${isExpanded ? 'expanded' : ''}" onclick="togglePlayer('${p.id}')">
+          <div class="status-dot ${isOut ? 'out' : 'alive'}"></div>
+          <div>
+            <div class="player-name">${p.name}</div>
+            <div class="player-meta">
+              <span class="house-tag ${houseClass}">${p.house}</span>
+            </div>
+          </div>
+          <div class="kills-col hide-mobile">
+            <div class="kills-num ${p.kills === 0 ? 'zero' : ''}">${p.kills}</div>
+            <div class="kills-label">Kills</div>
+          </div>
+          <div class="survived-col hide-mobile">
+            ${isOut
+              ? `<div class="survived-label">Survived</div>${formatSurvived(GAME_START, p.eliminatedAt)}`
+              : `<div class="survived-label">Status</div><span style="color: var(--hunter); font-weight: 700;">Active</span>`
+            }
+          </div>
+          <div class="row-caret"></div>
+        </div>
+        <div class="player-detail ${isExpanded ? 'open' : ''}">
+          ${isExpanded ? renderPlayerDetail(p) : ''}
+        </div>
+      `;
+    }).join('');
+
+    renderPagination(list.length, totalPages, start, pageItems.length);
+  }
+
+  function renderPlayerDetail(p) {
+    // Find everyone this player has eliminated
+    const eliminated = players
+      .filter(x => x.assassinBy === p.id)
+      .sort((a, b) => b.eliminatedAt - a.eliminatedAt);
+
+    // If player is out, find who got them
+    const gotBy = p.status === 'out' ? players.find(x => x.id === p.assassinBy) : null;
+
+    const kills = eliminated.length;
+
+    return `
+      <div class="detail-grid">
+        <div class="detail-block">
+          <div class="detail-block-label">House</div>
+          <div class="detail-block-value">${p.house}</div>
+        </div>
+        <div class="detail-block">
+          <div class="detail-block-label">Status</div>
+          <div class="detail-block-value ${p.status === 'out' ? 'red' : ''}">${p.status === 'alive' ? 'Still in the game' : 'Out'}</div>
+        </div>
+      </div>
+
+      <div class="eliminated-list">
+        <div class="eliminated-list-head">
+          <div class="label"><span>◉</span> Players they've eliminated</div>
+          <div class="count">${kills}</div>
+        </div>
+        ${kills === 0
+          ? `<div class="eliminated-list-empty">No assassinations yet.</div>`
+          : eliminated.map(e => `
+              <div class="eliminated-list-item">
+                <div class="kill-name">${e.name}</div>
+                <div class="kill-meta">
+                  <span class="house-tag ${HOUSES[e.house].className}">${e.house}</span>
+                  <span>${formatAgo(e.eliminatedAt)}</span>
+                </div>
+              </div>
+            `).join('')
+        }
+      </div>
+
+      ${gotBy ? `
+        <div class="got-by">
+          <span class="got-label">Got by</span>
+          <span class="got-name">${gotBy.name}</span>
+          <span class="house-tag ${HOUSES[gotBy.house].className}">${gotBy.house}</span>
+          <span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink-soft);">${formatAgo(p.eliminatedAt)}</span>
+        </div>
+      ` : ''}
+    `;
+  }
+
+  function togglePlayer(id) {
+    expandedPlayerId = (String(expandedPlayerId) === String(id)) ? null : String(id);
+    renderPlayers();
+  }
+
+  function renderPagination(total, totalPages, start, onPage) {
+    const pagEl = document.getElementById('pagination');
+    if (totalPages <= 1) {
+      pagEl.style.display = 'none';
+      return;
+    }
+    pagEl.style.display = 'flex';
+
+    const from = start + 1;
+    const to = start + onPage;
+
+    // Build compact page button list: 1 … (cur-1) cur (cur+1) … last
+    const pages = [];
+    const push = (v) => pages.push(v);
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) push(i);
+    } else {
+      push(1);
+      if (currentPage > 3) push('…');
+      const windowStart = Math.max(2, currentPage - 1);
+      const windowEnd = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = windowStart; i <= windowEnd; i++) push(i);
+      if (currentPage < totalPages - 2) push('…');
+      push(totalPages);
+    }
+
+    pagEl.innerHTML = `
+      <div class="pagination-info">Showing ${from}–${to} of ${total}</div>
+      <div class="pagination-controls">
+        <button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})" aria-label="Previous page">‹</button>
+        ${pages.map(p => p === '…'
+          ? `<span class="page-ellipsis">…</span>`
+          : `<button class="page-btn ${p === currentPage ? 'active' : ''}" onclick="goToPage(${p})">${p}</button>`
+        ).join('')}
+        <button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})" aria-label="Next page">›</button>
+      </div>
+    `;
+  }
+
+  function goToPage(n) {
+    currentPage = n;
+    expandedPlayerId = null;
+    renderPlayers();
+  }
+
+  // ============ LEADERBOARD ============
+  function renderLeaderboard() {
+    const top5 = [...players].sort((a,b) => b.kills - a.kills).slice(0, 5);
+    document.getElementById('leaderboard').innerHTML = top5.map((p, i) => `
+      <div class="leaderboard-row">
+        <div class="rank ${i === 0 ? 'top' : ''}">${pad(i+1)}</div>
+        <div>
+          <div class="lb-name ${p.status === 'out' ? 'out' : ''}">${p.name}</div>
+          <div class="lb-meta">${p.house}</div>
+        </div>
+        <div class="lb-kills">${p.kills}</div>
+      </div>
+    `).join('');
+  }
+
+  // ============ HOUSE STANDINGS ============
+  function renderHouses() {
+    const houseData = Object.keys(HOUSES).map(house => {
+      const all = players.filter(p => p.house === house);
+      const alive = all.filter(p => p.status === 'alive').length;
+      return { house, alive, total: all.length, color: HOUSES[house].color };
+    });
+    document.getElementById('house-standings').innerHTML = houseData.map(h => {
+      const pct = h.total > 0 ? (h.alive / h.total) * 100 : 0;
+      return `
+        <div class="house-row">
+          <div class="house-row-head">
+            <div class="house-row-name">
+              <span class="house-swatch" style="background: ${h.color};"></span>
+              ${h.house}
+            </div>
+            <div class="house-row-count"><span class="alive-count">${h.alive}</span> / ${h.total} still in</div>
+          </div>
+          <div class="house-bar">
+            <div class="house-bar-fill" style="width: ${pct}%; background: ${h.color};"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ============ RECENT FEED ============
+  function renderRecent() {
+    const recent = players
+      .filter(p => p.status === 'out')
+      .sort((a,b) => b.eliminatedAt - a.eliminatedAt)
+      .slice(0, 5);
+    const el = document.getElementById('recent-feed');
+    if (recent.length === 0) {
+      el.innerHTML = '<div class="empty">No assassinations yet.</div>';
+      return;
+    }
+    el.innerHTML = recent.map(p => {
+      const by = players.find(x => x.id === p.assassinBy);
+      return `
+        <div style="padding: 14px 24px; border-bottom: 1px solid var(--line-soft); transition: background 0.15s;" onmouseover="this.style.background='var(--bg-warm)'" onmouseout="this.style.background=''">
+          <div style="font-size: 14px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.5;">
+            <strong style="font-weight: 700; text-decoration: line-through; text-decoration-color: var(--accent); text-decoration-thickness: 1.5px;">${p.name}</strong> <span style="color: var(--ink-soft);">got by</span> <strong style="font-weight: 700; color: var(--accent);">${by ? by.name : 'Unknown'}</strong>
+          </div>
+          <div style="font-family: 'Inter', sans-serif; font-size: 11px; color: var(--ink-faint); margin-top: 5px; font-weight: 600; letter-spacing: 0.05em;">
+            ${formatAgo(p.eliminatedAt)}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ============ MODAL ============
+  function openModal() {
+    const modal = document.getElementById('modal');
+    const alive = players.filter(p => p.status === 'alive');
+    const sorted = [...alive].sort((a,b) => a.name.localeCompare(b.name));
+
+    const assassinSel = document.getElementById('assassin-select');
+    const targetSel = document.getElementById('target-select');
+
+    assassinSel.innerHTML = '<option value="">— Select yourself —</option>' +
+      sorted.map(p => `<option value="${p.id}">${p.name} · ${p.house}</option>`).join('');
+    targetSel.innerHTML = '<option value="">— Select target —</option>' +
+      sorted.map(p => `<option value="${p.id}">${p.name} · ${p.house}</option>`).join('');
+
+    document.getElementById('time-input').value = toLocalInput(new Date());
+    modal.classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+  }
+
+  async function submitKill() {
+    const assassinId = document.getElementById('assassin-select').value;
+    const targetId   = document.getElementById('target-select').value;
+    const timeVal    = document.getElementById('time-input').value;
+
+    if (!assassinId || !targetId) {
+      alert('Pick both an assassin and a target.');
+      return;
+    }
+    if (assassinId === targetId) {
+      alert("You can't assassinate yourself.");
+      return;
+    }
+    if (!timeVal) {
+      alert('Enter a time.');
+      return;
+    }
+
+    const when = new Date(timeVal);
+    const assassin = players.find(p => String(p.id) === String(assassinId));
+
+    if (firebaseMode === 'online' && db) {
+      try {
+        const batch = writeBatch(db);
+        batch.update(doc(db, 'players', String(targetId)), {
+          status: 'out',
+          assassinBy: String(assassinId),
+          eliminatedAt: Timestamp.fromDate(when)
+        });
+        batch.update(doc(db, 'players', String(assassinId)), {
+          kills: (assassin?.kills || 0) + 1
+        });
+        await batch.commit();
+      } catch (e) {
+        console.error('Failed to write kill to Firestore:', e);
+        alert('Could not save to the database. Please try again.');
+        return;
+      }
+    } else {
+      // Local-only mode: update in-memory list so UI still works for testing
+      players = players.map(p => {
+        if (String(p.id) === String(targetId)) return { ...p, status: 'out', assassinBy: String(assassinId), eliminatedAt: when };
+        if (String(p.id) === String(assassinId)) return { ...p, kills: (p.kills || 0) + 1 };
+        return p;
+      });
+      renderAll();
+    }
+
+    closeModal();
+  }
+
+  // Close modal on backdrop click
+  document.getElementById('modal').addEventListener('click', (e) => {
+    if (e.target.id === 'modal') closeModal();
+  });
+  document.getElementById('admin-login-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'admin-login-modal') closeAdminLogin();
+  });
+  document.getElementById('admin-panel-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'admin-panel-modal') closeAdminPanel();
+  });
+  // Close on escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      closeAdminLogin();
+      closeAdminPanel();
+    }
+  });
+
+  // ============ FILTER + SEARCH ============
+  document.getElementById('filter-pills').addEventListener('click', (e) => {
+    if (!e.target.matches('.pill')) return;
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    e.target.classList.add('active');
+    filter = e.target.dataset.filter;
+    currentPage = 1;
+    expandedPlayerId = null;
+    renderPlayers();
+  });
+  document.getElementById('search').addEventListener('input', (e) => {
+    search = e.target.value;
+    currentPage = 1;
+    expandedPlayerId = null;
+    renderPlayers();
+  });
+
+  // ============ RULES ACCORDION ============
+  function toggleRules() {
+    const acc = document.getElementById('rules-accordion');
+    const trigger = acc.querySelector('.rules-trigger');
+    const isOpen = acc.classList.toggle('open');
+    trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  }
+
+  // ============ FIREBASE STATUS UI ============
+  function updateFbStatus(mode, text) {
+    firebaseMode = mode;
+    const dot = document.getElementById('fb-status-dot');
+    const txt = document.getElementById('fb-status-text');
+    dot.classList.remove('connected', 'error', 'local');
+    if (mode === 'online')  { dot.classList.add('connected'); }
+    if (mode === 'error')   { dot.classList.add('error'); }
+    if (mode === 'local')   { dot.classList.add('local'); }
+    txt.textContent = text;
+  }
+
+  // ============ FIRESTORE SUBSCRIPTIONS ============
+  function startFirestoreSync() {
+    if (!firebaseReady) {
+      updateFbStatus('error', 'Offline — using demo data');
+      players = [...FALLBACK_DUMMY];
+      GAME_START = new Date(Date.now() - (4 * 864e5) - (7 * 36e5) - (23 * 6e4));
+      renderAll();
+      return;
+    }
+
+    updateFbStatus('connecting', 'Connecting…');
+
+    // Subscribe to players collection
+    try {
+      onSnapshot(collection(db, 'players'), (snap) => {
+        const list = [];
+        snap.forEach(d => {
+          const data = d.data();
+          list.push({
+            id: d.id,
+            name: data.name,
+            house: data.house,
+            status: data.status || 'alive',
+            kills: data.kills || 0,
+            assassinBy: data.assassinBy || null,
+            eliminatedAt: data.eliminatedAt ? data.eliminatedAt.toDate() : null
+          });
+        });
+        players = list;
+
+        if (firebaseMode !== 'online') {
+          updateFbStatus('online', `Live · ${list.length} players`);
+        } else {
+          document.getElementById('fb-status-text').textContent = `Live · ${list.length} players`;
+        }
+
+        renderAll();
+      }, (err) => {
+        console.error('Firestore snapshot error:', err);
+        updateFbStatus('error', 'Connection error');
+        if (players.length === 0) {
+          players = [...FALLBACK_DUMMY];
+          renderAll();
+        }
+      });
+
+      // Subscribe to game_meta doc for game start time
+      onSnapshot(doc(db, 'game_meta', 'main'), (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.gameStart) {
+            GAME_START = data.gameStart.toDate();
+          }
+        } else {
+          // Auto-create game_meta on first run
+          setDoc(doc(db, 'game_meta', 'main'), {
+            gameStart: Timestamp.fromDate(new Date())
+          }).catch(e => console.error('Could not create game_meta:', e));
+        }
+      }, (err) => console.error('game_meta error:', err));
+
+    } catch (e) {
+      console.error('Firestore sync failed:', e);
+      updateFbStatus('error', 'Offline — using demo data');
+      players = [...FALLBACK_DUMMY];
+      renderAll();
+    }
+  }
+
+  // ============ ADMIN: LOGIN ============
+  function openAdminLogin() {
+    document.getElementById('admin-password').value = '';
+    document.getElementById('admin-login-error').style.display = 'none';
+    document.getElementById('admin-login-modal').classList.add('open');
+    setTimeout(() => document.getElementById('admin-password').focus(), 50);
+  }
+  function closeAdminLogin() {
+    document.getElementById('admin-login-modal').classList.remove('open');
+  }
+  function submitAdminLogin() {
+    const pw = document.getElementById('admin-password').value;
+    if (pw === ADMIN_PASSWORD) {
+      isAdmin = true;
+      sessionStorage.setItem('pegAdmin', 'true');
+      closeAdminLogin();
+      refreshAdminUI();
+      openAdminPanel();
+    } else {
+      document.getElementById('admin-login-error').style.display = 'block';
+    }
+  }
+  function adminLogout() {
+    isAdmin = false;
+    sessionStorage.removeItem('pegAdmin');
+    refreshAdminUI();
+  }
+  function refreshAdminUI() {
+    document.getElementById('admin-login-btn').style.display = isAdmin ? 'none' : 'inline-flex';
+    document.getElementById('admin-panel-btn').style.display = isAdmin ? 'inline-flex' : 'none';
+    document.getElementById('admin-logout-btn').style.display = isAdmin ? 'inline-flex' : 'none';
+    document.getElementById('admin-welcome').style.display   = isAdmin ? 'inline' : 'none';
+  }
+
+  // ============ ADMIN: PANEL ============
+  function openAdminPanel() {
+    if (!isAdmin) {
+      openAdminLogin();
+      return;
+    }
+    document.getElementById('admin-panel-modal').classList.add('open');
+    switchAdminTab('import');
+    renderCancelList();
+    // Reset import UI
+    pendingImport = null;
+    document.getElementById('import-feedback').innerHTML = '';
+    document.getElementById('student-file').value = '';
+  }
+  function closeAdminPanel() {
+    document.getElementById('admin-panel-modal').classList.remove('open');
+  }
+  function switchAdminTab(tab) {
+    document.querySelectorAll('.admin-tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
+    document.querySelectorAll('.admin-tab-panel').forEach(el => el.classList.remove('active'));
+    document.getElementById('admin-tab-' + tab).classList.add('active');
+    if (tab === 'cancel') renderCancelList();
+  }
+
+  // ============ ADMIN: IMPORT STUDENTS ============
+  const fileInput = document.getElementById('student-file');
+  const uploadZone = document.getElementById('upload-zone');
+
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) handleImportFile(e.target.files[0]);
+  });
+  ['dragenter', 'dragover'].forEach(ev => uploadZone.addEventListener(ev, (e) => {
+    e.preventDefault(); e.stopPropagation();
+    uploadZone.classList.add('dragover');
+  }));
+  ['dragleave', 'drop'].forEach(ev => uploadZone.addEventListener(ev, (e) => {
+    e.preventDefault(); e.stopPropagation();
+    uploadZone.classList.remove('dragover');
+  }));
+  uploadZone.addEventListener('drop', (e) => {
+    const file = e.dataTransfer.files[0];
+    if (file) handleImportFile(file);
+  });
+
+  function handleImportFile(file) {
+    const feedback = document.getElementById('import-feedback');
+    feedback.innerHTML = `<div class="notice info">Reading <strong>${file.name}</strong>…</div>`;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = new Uint8Array(ev.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+        processImportRows(rows, file.name);
+      } catch (err) {
+        console.error(err);
+        feedback.innerHTML = `<div class="notice error">Could not read file. Make sure it's a valid Excel or CSV file.</div>`;
+      }
+    };
+    reader.onerror = () => {
+      feedback.innerHTML = `<div class="notice error">Could not read file.</div>`;
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function processImportRows(rows, fileName) {
+    const feedback = document.getElementById('import-feedback');
+    if (!rows || rows.length === 0) {
+      feedback.innerHTML = `<div class="notice error">The file is empty.</div>`;
+      return;
+    }
+
+    // Detect header row: if first row contains 'name' or 'house' (case-insensitive), skip it
+    let startRow = 0;
+    const first = rows[0].map(c => String(c).toLowerCase().trim());
+    if (first.some(c => c === 'name' || c === 'house' || c === 'student')) {
+      startRow = 1;
+    }
+
+    const parsed = [];
+    for (let i = startRow; i < rows.length; i++) {
+      const row = rows[i];
+      const name = String(row[0] || '').trim();
+      const houseRaw = String(row[1] || '').trim();
+      if (!name && !houseRaw) continue; // blank row
+      const house = normaliseHouse(houseRaw);
+      const valid = name.length > 0 && house !== null;
+      parsed.push({
+        name,
+        house: house || houseRaw,
+        valid,
+        reason: !name ? 'Missing name' : (!house ? `Unknown house "${houseRaw}"` : null)
+      });
+    }
+
+    if (parsed.length === 0) {
+      feedback.innerHTML = `<div class="notice error">No data rows found in the file.</div>`;
+      return;
+    }
+
+    pendingImport = parsed;
+
+    const validCount = parsed.filter(r => r.valid).length;
+    const errorCount = parsed.length - validCount;
+
+    let html = '';
+    html += `<div class="notice ${errorCount > 0 ? 'warn' : 'success'}">
+      Found <strong>${parsed.length}</strong> rows in <strong>${fileName}</strong>
+      — ${validCount} valid${errorCount > 0 ? `, ${errorCount} with errors` : ''}.
+      ${errorCount > 0 ? ' Fix the source file and re-upload, or import only the valid rows below.' : ''}
+    </div>`;
+
+    html += `<div class="import-preview">
+      <div class="import-preview-row header">
+        <div>Name</div>
+        <div>House</div>
+        <div>Status</div>
+      </div>
+      ${parsed.map(r => `
+        <div class="import-preview-row ${r.valid ? '' : 'error'}">
+          <div>${escapeHtml(r.name) || '<em style="color:var(--ink-faint)">(blank)</em>'}</div>
+          <div>${escapeHtml(r.house) || '<em style="color:var(--ink-faint)">(blank)</em>'}</div>
+          <div>${r.valid ? '<span class="import-ok-badge">OK</span>' : `<span class="import-error-badge" title="${escapeHtml(r.reason)}">${escapeHtml(r.reason)}</span>`}</div>
+        </div>
+      `).join('')}
+    </div>`;
+
+    html += `<div class="import-actions">
+      <button class="btn btn-ghost" onclick="cancelImport()">Cancel</button>
+      <button class="btn btn-primary" onclick="commitImport(false)" ${validCount === 0 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>
+        Import ${validCount} student${validCount === 1 ? '' : 's'} (add to existing)
+      </button>
+      <button class="btn btn-danger" onclick="commitImport(true)" ${validCount === 0 ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>
+        Replace all with ${validCount}
+      </button>
+    </div>`;
+
+    feedback.innerHTML = html;
+  }
+
+  function normaliseHouse(raw) {
+    if (!raw) return null;
+    const lower = String(raw).toLowerCase().trim();
+    for (const h of VALID_HOUSES) {
+      if (h.toLowerCase() === lower) return h;
+    }
+    // Tolerant matching: single-word colour synonyms
+    const colourMap = { yellow: 'Shortland', green: 'Hunter', blue: 'Tyrrell', red: 'Macquarie' };
+    if (colourMap[lower]) return colourMap[lower];
+    return null;
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function cancelImport() {
+    pendingImport = null;
+    document.getElementById('import-feedback').innerHTML = '';
+    document.getElementById('student-file').value = '';
+  }
+
+  async function commitImport(replaceAll) {
+    if (!pendingImport) return;
+    const valid = pendingImport.filter(r => r.valid);
+    if (valid.length === 0) return;
+
+    if (replaceAll) {
+      if (!confirm(`This will DELETE all existing players and replace them with ${valid.length} new students. Continue?`)) return;
+    }
+
+    const feedback = document.getElementById('import-feedback');
+    feedback.innerHTML = `<div class="notice info">Importing…</div>`;
+
+    if (!firebaseReady || firebaseMode !== 'online') {
+      // Local-only fallback
+      if (replaceAll) players = [];
+      const existingIds = new Set(players.map(p => p.id));
+      let nextId = 1;
+      while (existingIds.has(String(nextId))) nextId++;
+      valid.forEach(r => {
+        players.push({
+          id: String(nextId++),
+          name: r.name,
+          house: r.house,
+          status: 'alive',
+          kills: 0
+        });
+      });
+      renderAll();
+      feedback.innerHTML = `<div class="notice warn">Imported ${valid.length} student(s) locally. Firebase is not connected, so this won't persist or sync.</div>`;
+      return;
+    }
+
+    try {
+      if (replaceAll) {
+        // Wipe existing players first
+        const existing = await getDocs(collection(db, 'players'));
+        const deleteBatch = writeBatch(db);
+        existing.forEach(d => deleteBatch.delete(d.ref));
+        await deleteBatch.commit();
+
+        // Reset game start timestamp
+        await setDoc(doc(db, 'game_meta', 'main'), {
+          gameStart: Timestamp.fromDate(new Date())
+        });
+      }
+
+      // Write new players in a batch (Firestore allows up to 500 writes per batch)
+      const batch = writeBatch(db);
+      const nowExisting = replaceAll ? new Set() : new Set(players.map(p => p.id));
+      let nextId = 1;
+      valid.forEach(r => {
+        while (nowExisting.has(String(nextId))) nextId++;
+        const id = String(nextId++);
+        nowExisting.add(id);
+        batch.set(doc(db, 'players', id), {
+          name: r.name,
+          house: r.house,
+          status: 'alive',
+          kills: 0
+        });
+      });
+      await batch.commit();
+
+      feedback.innerHTML = `<div class="notice success">Successfully imported ${valid.length} student${valid.length === 1 ? '' : 's'}.</div>`;
+      pendingImport = null;
+      document.getElementById('student-file').value = '';
+    } catch (err) {
+      console.error('Import failed:', err);
+      feedback.innerHTML = `<div class="notice error">Import failed: ${escapeHtml(err.message || String(err))}</div>`;
+    }
+  }
+
+  // ============ ADMIN: CANCEL ELIMINATION ============
+  function renderCancelList() {
+    const wrap = document.getElementById('cancel-list-wrap');
+    const out = players
+      .filter(p => p.status === 'out')
+      .sort((a, b) => (b.eliminatedAt || 0) - (a.eliminatedAt || 0));
+
+    if (out.length === 0) {
+      wrap.innerHTML = `<div class="notice info">No eliminations yet — nothing to cancel.</div>`;
+      return;
+    }
+
+    wrap.innerHTML = `
+      <div class="cancel-list">
+        ${out.map(p => {
+          const by = players.find(x => String(x.id) === String(p.assassinBy));
+          const when = p.eliminatedAt ? formatAgo(p.eliminatedAt) : 'unknown';
+          return `
+            <div class="cancel-row">
+              <div>
+                <div class="cancel-name">${escapeHtml(p.name)} <span style="color: var(--ink-faint); font-weight:500; font-size:12px;">· ${escapeHtml(p.house)}</span></div>
+                <div class="cancel-meta">Out ${when} · got by <strong>${by ? escapeHtml(by.name) : 'Unknown'}</strong></div>
+              </div>
+              <button class="cancel-btn" onclick="cancelElimination('${p.id}')">Bring back</button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  async function cancelElimination(playerId) {
+    const target = players.find(p => String(p.id) === String(playerId));
+    if (!target) return;
+    const assassin = players.find(p => String(p.id) === String(target.assassinBy));
+    const assassinName = assassin ? assassin.name : 'the assassin';
+
+    if (!confirm(`Bring ${target.name} back into the game? ${assassinName}'s kill count will be reduced by 1.`)) return;
+
+    if (firebaseMode === 'online' && db) {
+      try {
+        const batch = writeBatch(db);
+        batch.update(doc(db, 'players', String(playerId)), {
+          status: 'alive',
+          assassinBy: null,
+          eliminatedAt: null
+        });
+        if (assassin) {
+          batch.update(doc(db, 'players', String(assassin.id)), {
+            kills: Math.max(0, (assassin.kills || 0) - 1)
+          });
+        }
+        await batch.commit();
+      } catch (e) {
+        console.error('Cancel failed:', e);
+        alert('Could not cancel the elimination. Please try again.');
+        return;
+      }
+    } else {
+      // Local fallback
+      players = players.map(p => {
+        if (String(p.id) === String(playerId)) return { ...p, status: 'alive', assassinBy: null, eliminatedAt: null };
+        if (assassin && String(p.id) === String(assassin.id)) return { ...p, kills: Math.max(0, (p.kills || 0) - 1) };
+        return p;
+      });
+      renderAll();
+    }
+
+    renderCancelList();
+  }
+
+  // ============ ADMIN: CLEAR ALL ============
+  async function clearAllPlayers() {
+    if (!confirm('Delete ALL players and reset the game? This cannot be undone.')) return;
+    if (!confirm('Are you absolutely sure? This will wipe every student from the database.')) return;
+
+    if (firebaseMode === 'online' && db) {
+      try {
+        const snap = await getDocs(collection(db, 'players'));
+        const batch = writeBatch(db);
+        snap.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+        await setDoc(doc(db, 'game_meta', 'main'), { gameStart: Timestamp.fromDate(new Date()) });
+        document.getElementById('import-feedback').innerHTML = `<div class="notice success">All players cleared. Game timer reset.</div>`;
+      } catch (e) {
+        console.error(e);
+        alert('Could not clear players.');
+      }
+    } else {
+      players = [];
+      GAME_START = new Date();
+      renderAll();
+      document.getElementById('import-feedback').innerHTML = `<div class="notice warn">Cleared locally (not connected to Firebase).</div>`;
+    }
+  }
+
+  // ============ EXPOSE FUNCTIONS TO ONCLICK HANDLERS ============
+  // Module scripts don't put functions on window by default — we need to.
+  window.openModal = openModal;
+  window.closeModal = closeModal;
+  window.submitKill = submitKill;
+  window.togglePlayer = togglePlayer;
+  window.goToPage = goToPage;
+  window.toggleRules = toggleRules;
+  window.openAdminLogin = openAdminLogin;
+  window.closeAdminLogin = closeAdminLogin;
+  window.submitAdminLogin = submitAdminLogin;
+  window.openAdminPanel = openAdminPanel;
+  window.closeAdminPanel = closeAdminPanel;
+  window.adminLogout = adminLogout;
+  window.switchAdminTab = switchAdminTab;
+  window.cancelImport = cancelImport;
+  window.commitImport = commitImport;
+  window.cancelElimination = cancelElimination;
+  window.clearAllPlayers = clearAllPlayers;
+
+  // ============ INITIAL RENDER ============
+  function renderAll() {
+    renderStats();
+    renderPlayers();
+    renderLeaderboard();
+    renderHouses();
+    renderRecent();
+  }
+
+  refreshAdminUI();
+  startFirestoreSync();
+  renderAll();
+</script>
+</body>
+</html>
