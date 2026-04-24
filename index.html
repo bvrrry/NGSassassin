@@ -408,6 +408,133 @@
     font-weight: 500;
   }
 
+  /* ============ PRE-GAME MODAL ============ */
+  .pregame-modal {
+    max-width: 520px !important;
+    text-align: center;
+    overflow: hidden;
+  }
+  .pregame-header {
+    padding: 40px 32px 24px;
+    background: linear-gradient(135deg, var(--accent-dark) 0%, var(--accent) 100%);
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .pregame-header::before {
+    content: '';
+    position: absolute;
+    top: -50%; right: -20%;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(255,255,255,0.15), transparent 60%);
+    pointer-events: none;
+  }
+  .pregame-header::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: -30px;
+    width: 250px; height: 250px;
+    background: radial-gradient(circle, rgba(255,255,255,0.1), transparent 60%);
+    pointer-events: none;
+    animation: drift 12s ease-in-out infinite;
+  }
+  .pregame-peg {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 14px;
+    display: block;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+    animation: peg-tilt 4s ease-in-out infinite;
+    transform-origin: 50% 20%;
+    position: relative;
+    z-index: 1;
+  }
+  .pregame-eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.8);
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 1;
+  }
+  .pregame-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    position: relative;
+    z-index: 1;
+  }
+  .pregame-body {
+    padding: 28px 32px 24px;
+  }
+  .pregame-start {
+    font-family: 'Inter', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+  }
+  .pregame-date {
+    font-size: 14px;
+    color: var(--ink-soft);
+    font-weight: 500;
+    margin-bottom: 24px;
+  }
+  .pregame-countdown {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 28px;
+    padding: 18px;
+    background: var(--bg-warm);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  .countdown-unit {
+    text-align: center;
+  }
+  .countdown-num {
+    font-family: 'Inter', sans-serif;
+    font-size: 34px;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+  .countdown-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-top: 6px;
+  }
+  .pregame-desc {
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+    margin-bottom: 24px;
+    font-weight: 500;
+  }
+  .pregame-desc strong { color: var(--ink); font-weight: 700; }
+  .pregame-actions {
+    padding: 0 32px 28px;
+  }
+  .pregame-actions .btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 15px;
+    padding: 14px;
+  }
+
   /* ============ HEADER ============ */
   .site-header {
     display: flex;
@@ -1930,6 +2057,54 @@
   </div>
 </div>
 
+<!-- ============ PRE-GAME MODAL ============ -->
+<div class="modal-backdrop" id="pregame-modal">
+  <div class="modal pregame-modal">
+    <div class="pregame-header">
+      <svg class="pregame-peg" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="14" y="8" width="36" height="44" rx="3" fill="#c9a87a" stroke="#1a0e0b" stroke-width="2"/>
+        <path d="M32 8 L32 52" stroke="#1a0e0b" stroke-width="2"/>
+        <circle cx="32" cy="28" r="3.5" fill="#ffffff" stroke="#1a0e0b" stroke-width="1.5"/>
+        <path d="M20 52 L20 58 M44 52 L44 58" stroke="#1a0e0b" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <div class="pregame-eyebrow">The game is coming</div>
+      <div class="pregame-title">Get your pegs ready.</div>
+    </div>
+
+    <div class="pregame-body">
+      <div class="pregame-start">Game begins Wednesday at 8:00 AM</div>
+      <div class="pregame-date">29 April 2026</div>
+
+      <div class="pregame-countdown" id="pregame-countdown">
+        <div class="countdown-unit">
+          <div class="countdown-num" id="pre-d">0</div>
+          <div class="countdown-label">Days</div>
+        </div>
+        <div class="countdown-unit">
+          <div class="countdown-num" id="pre-h">0</div>
+          <div class="countdown-label">Hours</div>
+        </div>
+        <div class="countdown-unit">
+          <div class="countdown-num" id="pre-m">0</div>
+          <div class="countdown-label">Mins</div>
+        </div>
+        <div class="countdown-unit">
+          <div class="countdown-num" id="pre-s">0</div>
+          <div class="countdown-label">Secs</div>
+        </div>
+      </div>
+
+      <div class="pregame-desc">
+        Your target will be revealed when the game begins. Until then, feel free to explore the site, read the <strong>rules</strong>, and scope out the competition.
+      </div>
+    </div>
+
+    <div class="pregame-actions">
+      <button class="btn btn-primary" onclick="closePregameModal()">Got it — let me explore</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
   // ============ FIREBASE IMPORTS & INIT ============
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -1973,7 +2148,8 @@
 
   // ============ STATE ============
   let players = [];              // live state, synced from Firestore or local-only
-  let GAME_START = new Date();   // set from Firestore game_meta doc, or now
+  // Game starts Wednesday 29 April 2026 at 8:00 AM (local time)
+  const GAME_START = new Date(2026, 3, 29, 8, 0, 0); // note: month is 0-indexed (3 = April)
   let isAdmin = sessionStorage.getItem('pegAdmin') === 'true';
   let pendingImport = null;      // rows parsed from uploaded file, awaiting confirmation
 
@@ -2037,7 +2213,18 @@
 
   // ============ TIMER ============
   function tickTimer() {
-    const d = formatDuration(Date.now() - GAME_START);
+    const now = Date.now();
+    const isBeforeStart = now < GAME_START.getTime();
+    const diff = isBeforeStart ? (GAME_START.getTime() - now) : (now - GAME_START.getTime());
+    const d = formatDuration(diff);
+
+    const labelEl = document.querySelector('.timer-label');
+    if (labelEl) {
+      labelEl.innerHTML = isBeforeStart
+        ? '<span class="live-pip" style="background: #e0a02d;"></span> Game starts in'
+        : '<span class="live-pip"></span> Game running for';
+    }
+
     document.getElementById('t-d').textContent = d.d;
     document.getElementById('t-h').textContent = pad(d.h);
     document.getElementById('t-m').textContent = pad(d.m);
@@ -2410,6 +2597,7 @@
       closeModal();
       closeAdminLogin();
       closeAdminPanel();
+      closePregameModal();
     }
   });
 
@@ -2455,7 +2643,6 @@
     if (!firebaseReady) {
       updateFbStatus('error', 'Offline — using demo data');
       players = [...FALLBACK_DUMMY];
-      GAME_START = new Date(Date.now() - (4 * 864e5) - (7 * 36e5) - (23 * 6e4));
       renderAll();
       return;
     }
@@ -2495,21 +2682,6 @@
           renderAll();
         }
       });
-
-      // Subscribe to game_meta doc for game start time
-      onSnapshot(doc(db, 'game_meta', 'main'), (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data.gameStart) {
-            GAME_START = data.gameStart.toDate();
-          }
-        } else {
-          // Auto-create game_meta on first run
-          setDoc(doc(db, 'game_meta', 'main'), {
-            gameStart: Timestamp.fromDate(new Date())
-          }).catch(e => console.error('Could not create game_meta:', e));
-        }
-      }, (err) => console.error('game_meta error:', err));
 
     } catch (e) {
       console.error('Firestore sync failed:', e);
@@ -2757,11 +2929,6 @@
         const deleteBatch = writeBatch(db);
         existing.forEach(d => deleteBatch.delete(d.ref));
         await deleteBatch.commit();
-
-        // Reset game start timestamp
-        await setDoc(doc(db, 'game_meta', 'main'), {
-          gameStart: Timestamp.fromDate(new Date())
-        });
       }
 
       // Write new players in a batch (Firestore allows up to 500 writes per batch)
@@ -2872,19 +3039,51 @@
         const batch = writeBatch(db);
         snap.forEach(d => batch.delete(d.ref));
         await batch.commit();
-        await setDoc(doc(db, 'game_meta', 'main'), { gameStart: Timestamp.fromDate(new Date()) });
-        document.getElementById('import-feedback').innerHTML = `<div class="notice success">All players cleared. Game timer reset.</div>`;
+        document.getElementById('import-feedback').innerHTML = `<div class="notice success">All players cleared.</div>`;
       } catch (e) {
         console.error(e);
         alert('Could not clear players.');
       }
     } else {
       players = [];
-      GAME_START = new Date();
       renderAll();
       document.getElementById('import-feedback').innerHTML = `<div class="notice warn">Cleared locally (not connected to Firebase).</div>`;
     }
   }
+
+  // ============ PRE-GAME MODAL ============
+  function checkPregame() {
+    if (Date.now() < GAME_START.getTime()) {
+      document.getElementById('pregame-modal').classList.add('open');
+      tickPregameCountdown();
+      setInterval(tickPregameCountdown, 1000);
+    }
+  }
+  function tickPregameCountdown() {
+    const diff = GAME_START.getTime() - Date.now();
+    if (diff <= 0) {
+      // Game has started — auto-close the popup
+      document.getElementById('pregame-modal').classList.remove('open');
+      return;
+    }
+    const d = formatDuration(diff);
+    const de = document.getElementById('pre-d');
+    const he = document.getElementById('pre-h');
+    const me = document.getElementById('pre-m');
+    const se = document.getElementById('pre-s');
+    if (de) de.textContent = d.d;
+    if (he) he.textContent = pad(d.h);
+    if (me) me.textContent = pad(d.m);
+    if (se) se.textContent = pad(d.s);
+  }
+  function closePregameModal() {
+    document.getElementById('pregame-modal').classList.remove('open');
+  }
+
+  // Close pregame on backdrop click
+  document.getElementById('pregame-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'pregame-modal') closePregameModal();
+  });
 
   // ============ EXPOSE FUNCTIONS TO ONCLICK HANDLERS ============
   // Module scripts don't put functions on window by default — we need to.
@@ -2905,6 +3104,7 @@
   window.commitImport = commitImport;
   window.cancelElimination = cancelElimination;
   window.clearAllPlayers = clearAllPlayers;
+  window.closePregameModal = closePregameModal;
 
   // ============ INITIAL RENDER ============
   function renderAll() {
@@ -2918,6 +3118,7 @@
   refreshAdminUI();
   startFirestoreSync();
   renderAll();
+  checkPregame();
 </script>
 </body>
 </html>
