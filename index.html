@@ -1439,11 +1439,11 @@
   .house-tag.macquarie { background: rgba(216, 73, 59, 0.15); }
   .house-tag.macquarie::before { background: var(--macquarie); }
 
-  .kills-col {
+  .elims-col {
     text-align: center;
     min-width: 40px;
   }
-  .kills-num {
+  .elims-num {
     font-family: 'Inter', sans-serif;
     font-size: 22px;
     font-weight: 800;
@@ -1452,8 +1452,8 @@
     letter-spacing: -0.03em;
     font-variant-numeric: tabular-nums;
   }
-  .kills-num.zero { color: var(--ink-faint); }
-  .kills-label {
+  .elims-num.zero { color: var(--ink-faint); }
+  .elims-label {
     font-family: 'Inter', sans-serif;
     font-size: 9px;
     font-weight: 600;
@@ -1512,7 +1512,7 @@
   .lb-name.out { color: var(--ink-faint); text-decoration: line-through; text-decoration-color: var(--accent); }
   .lb-meta { font-size: 11px; color: var(--ink-soft); margin-top: 3px; font-weight: 500; }
 
-  .lb-kills {
+  .lb-elims {
     font-family: 'Inter', sans-serif;
     font-size: 22px;
     font-weight: 800;
@@ -2157,24 +2157,24 @@
   // Only used if Firebase fails AND no local data exists yet.
   // Once Firebase is reachable the real data replaces this.
   const FALLBACK_DUMMY = [
-    { id: '1',  name: 'Eleanor Vance',    house: 'Shortland', status: 'alive', kills: 3 },
-    { id: '2',  name: 'Marcus Chen',      house: 'Hunter',    status: 'alive', kills: 2 },
-    { id: '3',  name: 'Priya Kaur',       house: 'Shortland', status: 'alive', kills: 4 },
-    { id: '4',  name: 'Jasper Okonkwo',   house: 'Tyrrell',   status: 'alive', kills: 1 },
-    { id: '5',  name: 'Sofia Rinaldi',    house: 'Macquarie', status: 'alive', kills: 2 },
-    { id: '6',  name: 'Theo Ashworth',    house: 'Hunter',    status: 'alive', kills: 3 },
-    { id: '7',  name: 'Maya Lindqvist',   house: 'Shortland', status: 'alive', kills: 1 },
-    { id: '8',  name: 'Dmitri Volkov',    house: 'Tyrrell',   status: 'alive', kills: 2 },
-    { id: '9',  name: 'Harriet Blackburn',house: 'Macquarie', status: 'alive', kills: 0 },
-    { id: '10', name: 'Kai Nakamura',     house: 'Hunter',    status: 'alive', kills: 1 },
-    { id: '11', name: 'Isla MacGregor',   house: 'Shortland', status: 'alive', kills: 0 },
-    { id: '12', name: 'Rafael Mendoza',   house: 'Tyrrell',   status: 'out',   kills: 1, assassinBy: '3', eliminatedAt: new Date(Date.now() - (3 * 864e5) - (2 * 36e5)) },
-    { id: '13', name: 'Freya Holloway',   house: 'Macquarie', status: 'out',   kills: 0, assassinBy: '1', eliminatedAt: new Date(Date.now() - (2 * 864e5) - (14 * 36e5)) },
-    { id: '14', name: 'Bastian Wolfe',    house: 'Hunter',    status: 'alive', kills: 0 },
-    { id: '15', name: 'Nadia El-Amin',    house: 'Shortland', status: 'out',   kills: 2, assassinBy: '6', eliminatedAt: new Date(Date.now() - (18 * 36e5)) },
-    { id: '16', name: 'Oscar Pemberton',  house: 'Tyrrell',   status: 'out',   kills: 0, assassinBy: '5', eliminatedAt: new Date(Date.now() - (1 * 864e5) - (6 * 36e5)) },
-    { id: '17', name: 'Luna Takahashi',   house: 'Macquarie', status: 'out',   kills: 1, assassinBy: '3', eliminatedAt: new Date(Date.now() - (3 * 36e5) - (12 * 6e4)) },
-    { id: '18', name: 'Gideon Ashcroft',  house: 'Shortland', status: 'out',   kills: 0, assassinBy: '6', eliminatedAt: new Date(Date.now() - (4 * 36e5)) },
+    { id: '1',  name: 'Eleanor Vance',    house: 'Shortland', status: 'alive', elims: 3 },
+    { id: '2',  name: 'Marcus Chen',      house: 'Hunter',    status: 'alive', elims: 2 },
+    { id: '3',  name: 'Priya Kaur',       house: 'Shortland', status: 'alive', elims: 4 },
+    { id: '4',  name: 'Jasper Okonkwo',   house: 'Tyrrell',   status: 'alive', elims: 1 },
+    { id: '5',  name: 'Sofia Rinaldi',    house: 'Macquarie', status: 'alive', elims: 2 },
+    { id: '6',  name: 'Theo Ashworth',    house: 'Hunter',    status: 'alive', elims: 3 },
+    { id: '7',  name: 'Maya Lindqvist',   house: 'Shortland', status: 'alive', elims: 1 },
+    { id: '8',  name: 'Dmitri Volkov',    house: 'Tyrrell',   status: 'alive', elims: 2 },
+    { id: '9',  name: 'Harriet Blackburn',house: 'Macquarie', status: 'alive', elims: 0 },
+    { id: '10', name: 'Kai Nakamura',     house: 'Hunter',    status: 'alive', elims: 1 },
+    { id: '11', name: 'Isla MacGregor',   house: 'Shortland', status: 'alive', elims: 0 },
+    { id: '12', name: 'Rafael Mendoza',   house: 'Tyrrell',   status: 'out',   elims: 1, assassinBy: '3', eliminatedAt: new Date(Date.now() - (3 * 864e5) - (2 * 36e5)) },
+    { id: '13', name: 'Freya Holloway',   house: 'Macquarie', status: 'out',   elims: 0, assassinBy: '1', eliminatedAt: new Date(Date.now() - (2 * 864e5) - (14 * 36e5)) },
+    { id: '14', name: 'Bastian Wolfe',    house: 'Hunter',    status: 'alive', elims: 0 },
+    { id: '15', name: 'Nadia El-Amin',    house: 'Shortland', status: 'out',   elims: 2, assassinBy: '6', eliminatedAt: new Date(Date.now() - (18 * 36e5)) },
+    { id: '16', name: 'Oscar Pemberton',  house: 'Tyrrell',   status: 'out',   elims: 0, assassinBy: '5', eliminatedAt: new Date(Date.now() - (1 * 864e5) - (6 * 36e5)) },
+    { id: '17', name: 'Luna Takahashi',   house: 'Macquarie', status: 'out',   elims: 1, assassinBy: '3', eliminatedAt: new Date(Date.now() - (3 * 36e5) - (12 * 6e4)) },
+    { id: '18', name: 'Gideon Ashcroft',  house: 'Shortland', status: 'out',   elims: 0, assassinBy: '6', eliminatedAt: new Date(Date.now() - (4 * 36e5)) },
   ];
 
   let filter = 'all';
@@ -2237,7 +2237,7 @@
   function renderStats() {
     const alive = players.filter(p => p.status === 'alive');
     const out   = players.filter(p => p.status === 'out');
-    const top   = [...players].sort((a,b) => b.kills - a.kills)[0];
+    const top   = [...players].sort((a,b) => b.elims - a.elims)[0];
     const last  = [...out].sort((a,b) => b.eliminatedAt - a.eliminatedAt)[0];
     const last24 = out.filter(p => (Date.now() - p.eliminatedAt) < 864e5).length;
 
@@ -2254,7 +2254,7 @@
       </div>
       <div class="stat">
         <div class="stat-label">Top assassin</div>
-        <div class="stat-value">${top ? top.kills : 0}</div>
+        <div class="stat-value">${top ? top.elims : 0}</div>
         <div class="stat-sub">${top ? top.name.split(' ')[0] + ' ' + (top.name.split(' ')[1]?.[0] || '') + '.' : '—'}</div>
       </div>
       <div class="stat">
@@ -2278,7 +2278,7 @@
     list.sort((a, b) => {
       if (a.status !== b.status) return a.status === 'alive' ? -1 : 1;
       if (a.status === 'out') return b.eliminatedAt - a.eliminatedAt;
-      return b.kills - a.kills;
+      return b.elims - a.elims;
     });
 
     const el = document.getElementById('player-list');
@@ -2317,9 +2317,9 @@
               <span class="house-tag ${houseClass}">${p.house}</span>
             </div>
           </div>
-          <div class="kills-col hide-mobile">
-            <div class="kills-num ${p.kills === 0 ? 'zero' : ''}">${p.kills}</div>
-            <div class="kills-label">Kills</div>
+          <div class="elims-col hide-mobile">
+            <div class="elims-num ${p.elims === 0 ? 'zero' : ''}">${p.elims}</div>
+            <div class="elims-label">elims</div>
           </div>
           <div class="survived-col hide-mobile">
             ${isOut
@@ -2347,7 +2347,7 @@
     // If player is out, find who got them
     const gotBy = p.status === 'out' ? players.find(x => x.id === p.assassinBy) : null;
 
-    const kills = eliminated.length;
+    const elims = eliminated.length;
 
     return `
       <div class="detail-grid">
@@ -2364,9 +2364,9 @@
       <div class="eliminated-list">
         <div class="eliminated-list-head">
           <div class="label"><span>◉</span> Players they've eliminated</div>
-          <div class="count">${kills}</div>
+          <div class="count">${elims}</div>
         </div>
-        ${kills === 0
+        ${elims === 0
           ? `<div class="eliminated-list-empty">No assassinations yet.</div>`
           : eliminated.map(e => `
               <div class="eliminated-list-item">
@@ -2443,7 +2443,7 @@
 
   // ============ LEADERBOARD ============
   function renderLeaderboard() {
-    const top5 = [...players].sort((a,b) => b.kills - a.kills).slice(0, 5);
+    const top5 = [...players].sort((a,b) => b.elims - a.elims).slice(0, 5);
     document.getElementById('leaderboard').innerHTML = top5.map((p, i) => `
       <div class="leaderboard-row">
         <div class="rank ${i === 0 ? 'top' : ''}">${pad(i+1)}</div>
@@ -2451,7 +2451,7 @@
           <div class="lb-name ${p.status === 'out' ? 'out' : ''}">${p.name}</div>
           <div class="lb-meta">${p.house}</div>
         </div>
-        <div class="lb-kills">${p.kills}</div>
+        <div class="lb-elims">${p.elims}</div>
       </div>
     `).join('');
   }
@@ -2560,7 +2560,7 @@
           eliminatedAt: Timestamp.fromDate(when)
         });
         batch.update(doc(db, 'players', String(assassinId)), {
-          kills: (assassin?.kills || 0) + 1
+          elims: (assassin?.elims || 0) + 1
         });
         await batch.commit();
       } catch (e) {
@@ -2572,7 +2572,7 @@
       // Local-only mode: update in-memory list so UI still works for testing
       players = players.map(p => {
         if (String(p.id) === String(targetId)) return { ...p, status: 'out', assassinBy: String(assassinId), eliminatedAt: when };
-        if (String(p.id) === String(assassinId)) return { ...p, kills: (p.kills || 0) + 1 };
+        if (String(p.id) === String(assassinId)) return { ...p, elims: (p.elims || 0) + 1 };
         return p;
       });
       renderAll();
@@ -2660,7 +2660,7 @@
             name: data.name,
             house: data.house,
             status: data.status || 'alive',
-            kills: data.kills || 0,
+            elims: data.elims || 0,
             assassinBy: data.assassinBy || null,
             eliminatedAt: data.eliminatedAt ? data.eliminatedAt.toDate() : null
           });
@@ -2914,7 +2914,7 @@
           name: r.name,
           house: r.house,
           status: 'alive',
-          kills: 0
+          elims: 0
         });
       });
       renderAll();
@@ -2943,7 +2943,7 @@
           name: r.name,
           house: r.house,
           status: 'alive',
-          kills: 0
+          elims: 0
         });
       });
       await batch.commit();
@@ -3006,7 +3006,7 @@
         });
         if (assassin) {
           batch.update(doc(db, 'players', String(assassin.id)), {
-            kills: Math.max(0, (assassin.kills || 0) - 1)
+            elims: Math.max(0, (assassin.elims || 0) - 1)
           });
         }
         await batch.commit();
@@ -3019,7 +3019,7 @@
       // Local fallback
       players = players.map(p => {
         if (String(p.id) === String(playerId)) return { ...p, status: 'alive', assassinBy: null, eliminatedAt: null };
-        if (assassin && String(p.id) === String(assassin.id)) return { ...p, kills: Math.max(0, (p.kills || 0) - 1) };
+        if (assassin && String(p.id) === String(assassin.id)) return { ...p, elims: Math.max(0, (p.elims || 0) - 1) };
         return p;
       });
       renderAll();
